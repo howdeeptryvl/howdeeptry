@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Quy đổi điểm THPT</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for Inter font and rounded corners */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 32px;
+            border-radius: 16px; /* Rounded corners for the main container */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px; /* Rounded corners for inputs/selects */
+            font-size: 16px;
+            color: #475569;
+            box-sizing: border-box; /* Ensures padding doesn't affect total width */
+        }
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+        .button-primary {
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px; /* Rounded corners for button */
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+        .button-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .result-box {
+            background-color: #eff6ff;
+            border-left: 5px solid #2563eb;
+            padding: 16px;
+            border-radius: 8px; /* Rounded corners for result box */
+            margin-top: 24px;
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #1e40af;
+        }
+        .warning-message {
+            color: #ef4444;
+            font-size: 0.9em;
+            margin-top: 16px;
+            text-align: center;
+        }
+        .disabled-option {
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-2 text-blue-700">Công cụ Quy đổi điểm THPT</h1>
+        <p class="text-center text-gray-600 mb-8">Công cụ do Hậu làm ra</p>
+
+        <div class="mb-6 input-group">
+            <label for="score">Điểm đầu vào:</label>
+            <input type="text" id="score" name="score" placeholder="Ví dụ: 29.5" required class="rounded-lg">
+        </div>
+
+        <div class="mb-6 input-group">
+            <label for="conversion_type">Loại điểm đầu vào:</label>
+            <select id="conversion_type" name="conversion_type" required class="rounded-lg">
+                <option value="hoc_ba">Học bạ</option>
+                <option value="spt">SPT</option>
+                <option value="hsa">HSA</option>
+            </select>
+        </div>
+
+        <div class="mb-8 input-group">
+            <label for="block">Khối:</label>
+            <select id="block" name="block" required class="rounded-lg">
+                <option value="A00">A00</option>
+                <option value="B00" class="disabled-option" disabled>B00 (Chưa hỗ trợ)</option>
+                <option value="C00" class="disabled-option" disabled>C00 (Chưa hỗ trợ)</option>
+                <option value="D01" class="disabled-option" disabled>D01 (Chưa hỗ trợ)</option>
+            </select>
+        </div>
+
+        <button onclick="performConversion()" class="button-primary rounded-lg">Quy đổi</button>
+
+        <div id="result" class="result-box hidden">
+            <!-- Kết quả sẽ hiển thị ở đây -->
+        </div>
+
+        <div class="warning-message">
+            *Lưu ý: Hiện tại chỉ hỗ trợ quy đổi cho khối A00.
+        </div>
+    </div>
+
+    <script>
+        // Dữ liệu quy đổi cho khối A00
+        // Mỗi loại quy đổi sẽ có một danh sách các tuple (a, b, c, d)
+        // a, b: khoảng điểm của phương thức A (đầu vào)
+        // c, d: khoảng điểm của phương thức B (đầu ra)
+        const CONVERSION_RANGES_A00 = {
+            'hoc_ba': [
+                // (a, b, c, d)
+                // Học bạ 29-30 -> THPT 25-30
+                { a: 29, b: 30, c: 25, d: 30 },
+                // Học bạ 24-29 -> THPT 20-25
+                { a: 24, b: 29, c: 20, d: 25 },
+                // Học bạ 19-24 -> THPT 15-20
+                { a: 19, b: 24, c: 15, d: 20 }
+            ],
+            'spt': [
+                // SPT 25-30 -> THPT 28.50-30
+                { a: 25.00, b: 30.00, c: 28.50, d: 30.00 },
+                // SPT 20-25 -> THPT 26.15-28.50
+                { a: 20.00, b: 25.00, c: 26.15, d: 28.50 },
+                // SPT 15-20 -> THPT 22.15-26.15
+                { a: 15.00, b: 20.00, c: 22.15, d: 26.15 },
+                // SPT 9-15 -> THPT 15.00-22.15
+                { a: 9.00, b: 15.00, c: 15.00, d: 22.15 }
+            ],
+            'hsa': [
+                // HSA 120-150 -> THPT 29.50-30
+                { a: 120, b: 150, c: 29.50, d: 30 },
+                // HSA 100-120 -> THPT 27.25-29.50
+                { a: 100, b: 120, c: 27.25, d: 29.50 },
+                // HSA 75-100 -> THPT 21.85-27.25
+                { a: 75, b: 100, c: 21.85, d: 27.25 },
+                // HSA 40-75 -> THPT 10.70-21.85
+                { a: 40, b: 75, c: 10.70, d: 21.85 }
+            ]
+        };
+
+        function calculateThpt(x, conversionType, block) {
+            /**
+             * Tính điểm THPT tương ứng từ điểm đầu vào (học bạ/SPT/HSA)
+             * dựa trên công thức y = (d-c)/(b-a) * (x-a) + c
+             */
+            if (block === 'A00' && CONVERSION_RANGES_A00[conversionType]) {
+                const ranges = CONVERSION_RANGES_A00[conversionType];
+                for (const { a, b, c, d } of ranges) {
+                    // Kiểm tra xem điểm x có nằm trong khoảng [a, b] không
+                    // Hoặc nếu x là biên trên của khoảng và là khoảng cuối cùng
+                    if ((x >= a && x <= b) || (x > b && a === Math.max(...ranges.map(r => r.a)))) {
+                        if (b === a) { // Tránh chia cho 0 nếu khoảng là một điểm duy nhất
+                            return c;
+                        }
+                        const y = ((d - c) / (b - a)) * (x - a) + c;
+                        return Math.round(y * 1000) / 1000; // Làm tròn 3 chữ số thập phân
+                    }
+                }
+                return "Không tìm thấy khoảng điểm phù hợp.";
+            } else {
+                return "Loại quy đổi hoặc khối không được hỗ trợ.";
+            }
+        }
+
+        function performConversion() {
+            const scoreInput = document.getElementById('score');
+            const conversionTypeSelect = document.getElementById('conversion_type');
+            const blockSelect = document.getElementById('block');
+            const resultDiv = document.getElementById('result');
+
+            let score = parseFloat(scoreInput.value);
+            const conversionType = conversionTypeSelect.value;
+            const block = blockSelect.value;
+
+            // Ẩn kết quả cũ
+            resultDiv.classList.add('hidden');
+            resultDiv.textContent = '';
+
+            if (isNaN(score)) {
+                resultDiv.textContent = "Vui lòng nhập một số hợp lệ cho điểm.";
+                resultDiv.classList.remove('hidden');
+                return;
+            }
+
+            const calculatedResult = calculateThpt(score, conversionType, block);
+
+            if (calculatedResult !== null) {
+                resultDiv.textContent = `Kết quả quy đổi điểm THPT: ${calculatedResult}`;
+                resultDiv.classList.remove('hidden');
+            } else {
+                resultDiv.textContent = "Không thể tính toán. Vui lòng kiểm tra lại thông tin.";
+                resultDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
